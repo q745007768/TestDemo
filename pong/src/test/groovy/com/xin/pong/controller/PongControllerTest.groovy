@@ -9,7 +9,7 @@ import reactor.test.StepVerifier
 import spock.lang.Specification
 
 @SpringBootTest
-class PongControllerSpec extends Specification {
+class PongControllerTest extends Specification {
 
 
     @Autowired

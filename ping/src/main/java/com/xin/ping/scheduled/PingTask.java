@@ -9,8 +9,11 @@ import org.springframework.stereotype.Component;
 @Component
 @ConditionalOnProperty(name = "scheduler.enabled", havingValue = "true", matchIfMissing = true)
 public class PingTask {
-    @Autowired
-    private PingService pingService;
+    private final PingService pingService;
+
+    public PingTask(PingService pingService) {
+        this.pingService = pingService;
+    }
 
     @Scheduled(fixedRateString = "${fixedRate}")
     public void pingTask() {

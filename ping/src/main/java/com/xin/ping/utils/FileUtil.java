@@ -2,6 +2,8 @@ package com.xin.ping.utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -13,12 +15,14 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 
+@Component
 public class FileUtil {
     private static final Logger log = LoggerFactory.getLogger(FileUtil.class);
-    public static final String LOCK_FILE_PATH = "rate_limit.txt";
+    @Value("${filePath}")
+    public  String LOCK_FILE_PATH;
     private static final int MAX_REQUESTS_PER_SECOND = 2;
 
-    public static boolean tryAcquire() {
+    public synchronized boolean tryAcquire() {
         FileChannel channel = null;
         FileLock lock = null;
         try {
@@ -76,7 +80,7 @@ public class FileUtil {
         }
     }
 
-    private static void writeToFile(FileChannel channel, long timestamp, int count) throws IOException {
+    private void writeToFile(FileChannel channel, long timestamp, int count) throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(16);
         buffer.putLong(timestamp);
         buffer.putInt(count);
