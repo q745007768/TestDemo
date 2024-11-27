@@ -8,6 +8,8 @@ import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
 import spock.lang.Specification
 
+import java.time.Duration
+
 @SpringBootTest
 class PongControllerTest extends Specification {
 
@@ -15,9 +17,9 @@ class PongControllerTest extends Specification {
     @Autowired
     PongController pongController;
 
-    def "第一个请求应在请求中返回200"() {
+    def "TestPongSuccess"() {
         when:
-        Mono response = pongController.pong()
+        Mono response = pongController.pong("Hello")
 
         then:
         StepVerifier.create(response)
@@ -25,12 +27,14 @@ class PongControllerTest extends Specification {
                 .verifyComplete()
     }
 
-    def "对于同一秒内的后续请求，应返回429请求过多"() {
+    def "TestTooManyRequests"() {
         given:
-        pongController.pong().block()
+        Mono.delay(Duration.ofSeconds(1)).block()
+
+        pongController.pong("Hello").block()
 
         when:
-        Mono response = pongController.pong()
+        Mono response = pongController.pong("Hello")
 
         then:
         StepVerifier.create(response)

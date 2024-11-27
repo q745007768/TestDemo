@@ -49,8 +49,6 @@ public class PingService {
                     result -> log.info("Request sent & Pong Respond: {}", result),
                     error -> log.info("Request not sent due to being 'rate limited' or other error: {}", error.getMessage())
             );
-        } else {
-            log.info("Get Lock error.");
         }
     }
 }

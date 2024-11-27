@@ -11,6 +11,9 @@ import reactor.core.publisher.Mono
 import spock.lang.Specification
 import spock.lang.Subject
 
+import java.time.Duration
+import java.util.concurrent.TimeoutException
+
 
 @SpringBootTest
 @TestPropertySource(properties = "scheduler.enabled=false")
@@ -48,7 +51,7 @@ class PingServiceTest extends Specification {
         def mockResponseSpec = Mock(WebClient.ResponseSpec)
 
         // Mock WebClient 调用链
-        pingService.client.post() >> mockClient  // 使用 POST 请求
+        pingService.client.post() >> mockClient
         mockClient.uri(pingService.pongUrl) >> mockHeadersSpec
         mockHeadersSpec.accept(_) >> mockHeadersSpec
         mockHeadersSpec.bodyValue("Hello") >> mockHeadersSpec  // 设置请求体为 "Hello"
@@ -63,7 +66,7 @@ class PingServiceTest extends Specification {
         1 * mockLogger.info("Request sent & Pong Respond: {}", "world")
     }
 
-    def "TestPingFail"() {
+    def "TestPingThrottled"() {
         given: "Mock FileUtil 和 Logger"
         GroovyMock(FileUtil, global: true)
         fileUtil.tryAcquire() >> true
@@ -78,7 +81,7 @@ class PingServiceTest extends Specification {
         def mockResponseSpec = Mock(WebClient.ResponseSpec)
 
         // Mock WebClient 调用链
-        pingService.client.post() >> mockClient  // 修改为 POST 请求
+        pingService.client.post() >> mockClient
         mockClient.uri(pingService.pongUrl) >> mockHeadersSpec
         mockHeadersSpec.accept(_) >> mockHeadersSpec
         mockHeadersSpec.bodyValue("Hello") >> mockHeadersSpec  // 设置请求体为 "Hello"
@@ -93,4 +96,32 @@ class PingServiceTest extends Specification {
         1 * mockLogger.info("Request sent & Pong Respond: {}", "Too Many Requests")
     }
 
+    def "testPingError"() {
+        given: "Mock FileUtil 和 WebClient 返回错误响应"
+        GroovyMock(FileUtil, global: true)
+        fileUtil.tryAcquire() >> true
+        Mono.delay(Duration.ofSeconds(1)).block()
+        def mockLogger = Mock(Logger)
+        pingService.log = mockLogger
+
+
+        def mockClient = Mock(WebClient.RequestBodyUriSpec)
+        def mockHeadersSpec = Mock(WebClient.RequestBodySpec)
+        def mockResponseSpec = Mock(WebClient.ResponseSpec)
+
+        // Mock WebClient 调用链
+        pingService.client.post() >> mockClient
+        mockClient.uri(pingService.pongUrl) >> mockHeadersSpec
+        mockHeadersSpec.accept(_) >> mockHeadersSpec
+        mockHeadersSpec.bodyValue("Hello") >> mockHeadersSpec  // 设置请求体为 "Hello"
+        mockHeadersSpec.retrieve() >> mockResponseSpec
+        mockResponseSpec.onStatus(_, _) >> mockResponseSpec
+        mockResponseSpec.bodyToMono(String.class) >> Mono.error(new TimeoutException("Connection timed out"))
+
+        when: "调用 pingPongService 方法"
+        pingService.pingPongService()
+
+        then: "验证超时错误日志"
+        1 * mockLogger.info("Request not sent due to being 'rate limited' or other error: {}", "Connection timed out")
+    }
 }
